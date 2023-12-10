@@ -14,7 +14,7 @@ interface CollaAirnode {
     ) external;
 }
 
-contract CollaUtilityV1 is AccessControl {
+contract CollaUtility is AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint256 constant ADDRESS_LENGTH = 42;
 
@@ -29,19 +29,36 @@ contract CollaUtilityV1 is AccessControl {
 
     address public protocolWallet;
 
-    uint public percentProtocol = 5 * 1e18;
-    uint public percentAirnode = 1 * 1e18;
+    uint public percentProtocol = 5 * 1e16;
+    uint public percentAirnode = 1 * 1e16;
 
     mapping(bytes32 => uint256) private requestFees;
 
     event NFTify(address from, uint tokenId, bytes data, uint deposit);
 
-    constructor(address _nftAddress, uint _mintPrice) {
+    constructor(
+        address _nftAddress,
+        address _protocolWallet,
+        uint _mintPrice,
+        address _airnode,
+        address _sponsor,
+        address _sponsorWallet,
+        bytes32 _endpointId,
+        address _requester
+    ) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
 
         nftAddress = _nftAddress;
+        protocolWallet = _protocolWallet;
         mintPrice = _mintPrice;
+
+        airnode = _airnode;
+        sponsor = _sponsor;
+        sponsorWallet = _sponsorWallet;
+        endpointId = _endpointId;
+        requester = _requester;
+        _grantRole(MINTER_ROLE, requester);
     }
 
     function setPercentage(
@@ -66,6 +83,7 @@ contract CollaUtilityV1 is AccessControl {
         address _requester
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         requester = _requester;
+        _grantRole(MINTER_ROLE, requester);
     }
 
     function setProtocolWallet(
@@ -84,13 +102,12 @@ contract CollaUtilityV1 is AccessControl {
         require(msg.value >= mintPrice, "Insufficient amount");
 
         uint protocolFee = (msg.value * percentProtocol) / 1e18;
-        (bool success, ) = payable(protocolWallet).call{value: protocolFee}("");
 
+        (bool success, ) = protocolWallet.call{value: protocolFee}("");
         require(success, "Unable to send to protocol address");
 
         uint airnodeCut = (msg.value * percentAirnode) / 1e18;
-        (bool success3, ) = payable(sponsorWallet).call{value: airnodeCut}("");
-
+        (bool success3, ) = sponsorWallet.call{value: airnodeCut}("");
         require(success3, "Unable to send to airnode address");
 
         bytes32 requestId = keccak256(
@@ -103,6 +120,7 @@ contract CollaUtilityV1 is AccessControl {
                 block.timestamp
             )
         );
+
         requestFees[requestId] = msg.value - protocolFee - airnodeCut;
 
         bytes memory data = abi.encode(nftName, ipfsAddress, cid);
@@ -142,6 +160,7 @@ contract CollaUtilityV1 is AccessControl {
             }("");
             if (success) {
                 emit NFTify(addresses[i], tokenId, forkData, feeForEachAddress);
+                delete requestFees[requestId];
             }
         }
     }

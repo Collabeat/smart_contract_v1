@@ -26,15 +26,46 @@ describe('Patreon', function () {
       dividendPercentage
     );
 
+    await patreon.waitForDeployment();
+
+    const airnodeInitConfig = {
+      airnode: '0x064A1cb4637aBD06176C8298ced20c672EE75fb1',
+      sponsor: '0xE55b0663C9c24613Bb0a420b6AFe7d904D4fa350',
+      sponsorWallet: otherAccount.address,
+      endpointId:
+        '0x304ecd5720ee55bc59e68131f8a018d9ff06079bc9060e7d8c5b5a9eff14addb',
+      requester: '0x28aa13fcA13bF883610E265a848e467331db5B93',
+    };
+
+    const Utility = await ethers.getContractFactory('CollaUtility');
+    const pricePerMint = ethers.parseEther('0.001');
+    const utility = await Utility.deploy(
+      nftAddress,
+      protocolWallet,
+      pricePerMint,
+      airnodeInitConfig.airnode,
+      airnodeInitConfig.sponsor,
+      airnodeInitConfig.sponsorWallet,
+      airnodeInitConfig.endpointId,
+      airnodeInitConfig.requester
+    );
+
+    await utility.waitForDeployment();
+
     return {
       nft,
       patreon,
+      utility,
       owner,
       otherAccount,
       otherAccount2,
+      protocolWallet,
       protocolFeePercentage,
       nftRoyaltyPercentage,
       dividendPercentage,
+      initConfig: {
+        airnode: airnodeInitConfig,
+      },
     };
   }
 
@@ -92,6 +123,80 @@ describe('Patreon', function () {
     });
   });
 
+  // Utility Deployment
+  describe('Utility Deployment', function () {
+    it('Should set the correct nft address', async function () {
+      const { nft, utility } = await loadFixture(deployPatreonFixture);
+
+      expect(await utility.nftAddress()).to.equal(await nft.getAddress());
+    });
+
+    it('Should set the correct protocol address', async function () {
+      const { utility, protocolWallet } = await loadFixture(
+        deployPatreonFixture
+      );
+
+      expect(await utility.protocolWallet()).to.equal(protocolWallet);
+    });
+
+    it('Should set the correct protocol percentage', async function () {
+      const { utility } = await loadFixture(deployPatreonFixture);
+
+      const percentProtocol = await utility.percentProtocol();
+      const expectedPercentage = BigInt(5) * BigInt(1e16);
+      expect(BigInt(percentProtocol)).to.equal(BigInt(expectedPercentage));
+    });
+
+    it('Should set the correct airnode percentage', async function () {
+      const { utility } = await loadFixture(deployPatreonFixture);
+
+      const percent = await utility.percentAirnode();
+      const expectedPercentage = BigInt(1) * BigInt(1e16);
+      expect(BigInt(percent)).to.equal(BigInt(expectedPercentage));
+    });
+
+    it('Should succesfully change protocol percentage', async function () {
+      const { utility } = await loadFixture(deployPatreonFixture);
+
+      const newPercent = BigInt(10) * BigInt(1e18);
+
+      await utility.setPercentage(newPercent, newPercent);
+      const percentAirnode = await utility.percentAirnode();
+      const percentProtocol = await utility.percentProtocol();
+
+      const result =
+        percentAirnode == newPercent && percentProtocol == newPercent;
+      expect(result).to.equal(true);
+    });
+
+    it('Should set the correct airnode configuration', async function () {
+      const { utility, initConfig, otherAccount } = await loadFixture(
+        deployPatreonFixture
+      );
+
+      const airnodeAddress = await utility.airnode();
+      const sponsorAddress = await utility.sponsor();
+      const sponsorWalletAddress = await utility.sponsorWallet();
+      const endpointId = await utility.endpointId();
+      const requesterAddress = await utility.requester();
+      const isGrantedRole = await utility.hasRole(
+        utility.MINTER_ROLE(),
+        requesterAddress
+      );
+
+      const result =
+        initConfig.airnode.airnode === airnodeAddress &&
+        initConfig.airnode.sponsor === sponsorAddress &&
+        initConfig.airnode.sponsorWallet === sponsorWalletAddress &&
+        initConfig.airnode.endpointId === endpointId &&
+        initConfig.airnode.requester === requesterAddress &&
+        isGrantedRole;
+
+      expect(result).to.equal(true);
+    });
+  });
+
+  // Price
   describe('Price', function () {
     it('Should get correct pricing for 0, 1 = 0.000003', async function () {
       const { patreon } = await loadFixture(deployPatreonFixture);
@@ -292,6 +397,60 @@ describe('Patreon', function () {
 
       const royalty = BigInt(afterBal) - BigInt(beforeBal) + BigInt(gasUsed);
       await expect(BigInt(royalty)).to.eq(BigInt(royaltyFee));
+    });
+  });
+
+  // Utility Deployment
+  describe('Utility Request', function () {
+    it('Should revert when sending zero value for mint', async function () {
+      const { utility } = await loadFixture(deployPatreonFixture);
+
+      await expect(
+        utility.mintRequest('0x', '', 'Name #1', 'https://ipfs.io/ipfs', 'bayc')
+      ).to.be.revertedWith('Insufficient amount');
+    });
+
+    it('Should send correct amount to protocol & airnode wallet', async function () {
+      const { utility, protocolWallet, initConfig, otherAccount } =
+        await loadFixture(deployPatreonFixture);
+
+      const mintPrice = await utility.mintPrice();
+      // tax
+      const expectedProtocolFee =
+        BigInt(mintPrice) * (await utility.percentProtocol());
+      const expectedAirnodeFee =
+        BigInt(mintPrice) * (await utility.percentAirnode());
+      const beforeProtocolBal = await ethers.provider.getBalance(
+        protocolWallet
+      );
+      const beforeAirnodeBal = await ethers.provider.getBalance(
+        initConfig.airnode.sponsorWallet
+      );
+
+      // use other account so we dont need to calculate gas fee
+      await utility.mintRequest(
+        '0x',
+        '',
+        'Name #1',
+        'https://ipfs.io/ipfs',
+        'bayc',
+        {
+          value: mintPrice,
+        }
+      );
+
+      const afterProtocolBal = await ethers.provider.getBalance(protocolWallet);
+      const afterAirnodeBal = await ethers.provider.getBalance(
+        initConfig.airnode.sponsorWallet
+      );
+
+      const protocolBal = BigInt(afterProtocolBal) - BigInt(beforeProtocolBal);
+      const airnodeBal = BigInt(afterAirnodeBal) - BigInt(beforeAirnodeBal);
+
+      const result =
+        protocolBal === expectedProtocolFee &&
+        airnodeBal === expectedAirnodeFee;
+      await expect(result).to.be.revertedWith(true);
     });
   });
 });
