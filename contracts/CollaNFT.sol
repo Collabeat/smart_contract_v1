@@ -44,7 +44,6 @@ contract CollaNFT is ERC1155, AccessControl, ERC1155Supply {
     }
 
     // The following functions are overrides required by Solidity.
-
     function _update(
         address from,
         address to,
