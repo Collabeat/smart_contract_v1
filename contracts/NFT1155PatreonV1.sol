@@ -37,6 +37,12 @@ contract NFT1155PatreonV1 is ReentrancyGuard {
         uint256 tokenId,
         uint256 amount
     );
+    event DividendClaimed(
+        address indexed claimant,
+        uint256 tokenId,
+        uint256 amount
+    );
+    event Dividend(uint256 tokenId, uint256 amount);
 
     struct BuyEvent {
         address user;
@@ -268,6 +274,7 @@ contract NFT1155PatreonV1 is ReentrancyGuard {
         if (keySupply[tokenId] > 0) {
             uint256 dividend = amount / keySupply[tokenId];
             dividendPerToken[tokenId] += dividend;
+            emit Dividend(tokenId, dividendPerToken[tokenId]);
         }
     }
 
@@ -277,11 +284,12 @@ contract NFT1155PatreonV1 is ReentrancyGuard {
         return holder;
     }
 
-    function claim(uint256 tokenId) public {
+    function claim(uint256 tokenId) public nonReentrant whenNotPaused {
         uint256 holderDividend = myDividend(tokenId);
         require(holderDividend > 0, "No dividen to claim");
 
         payOutDividend(tokenId, holderDividend);
+        emit DividendClaimed(msg.sender, tokenId, holderDividend);
     }
 
     function payOutDividend(uint256 tokenId, uint256 amount) internal {
