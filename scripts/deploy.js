@@ -41,10 +41,10 @@ async function main() {
     sponsorWallet: '0x4Da5688aA4a39f373dBD5E699Da318490f8DEF83',
     endpointId:
       '0x304ecd5720ee55bc59e68131f8a018d9ff06079bc9060e7d8c5b5a9eff14addb',
-    requester: '0x28aa13fcA13bF883610E265a848e467331db5B93',
+    requester: '0x9637897bAEDEDc02B39B6788114Da68E73c418f9',
   };
 
-  const Utility = await ethers.getContractFactory('CollaUtility');
+  const Utility = await ethers.getContractFactory('contracts/CollaUtility.sol:CollaUtility');
   const pricePerMint = ethers.parseEther('0.001');
   const utility = await Utility.deploy(
     nftAddress,

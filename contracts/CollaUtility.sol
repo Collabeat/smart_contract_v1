@@ -172,7 +172,7 @@ contract CollaUtility is AccessControl {
         bytes32 requestId
     ) public pure returns (bytes memory) {
         bytes memory parameters = abi.encode(
-            bytes32("1SSBB"),
+            bytes32("1SSBb"),
             bytes32("data_key"),
             dataKey,
             bytes32("version"),
