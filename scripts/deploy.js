@@ -6,9 +6,9 @@ async function main() {
 
   await nft.deploymentTransaction().wait(5);
 
-  const nftAddress = await nft.getAddress()
+  const nftAddress = await nft.getAddress();
 
-  await verify(nftAddress)
+  await verify(nftAddress);
 
   const protocolWallet = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
   const protocolFeePercentage = ethers.parseEther('0.05');
@@ -24,16 +24,16 @@ async function main() {
     dividendPercentage
   );
   await patreon.deploymentTransaction().wait(5);
-  
-  const patreonAddress = await patreon.getAddress()
+
+  const patreonAddress = await patreon.getAddress();
 
   verify(patreonAddress, [
     protocolWallet,
     nftAddress,
     protocolFeePercentage,
     nftRoyaltyPercentage,
-    dividendPercentage
-  ])
+    dividendPercentage,
+  ]);
 
   const airnodeInitConfig = {
     airnode: '0x064A1cb4637aBD06176C8298ced20c672EE75fb1',
@@ -44,7 +44,9 @@ async function main() {
     requester: '0x9637897bAEDEDc02B39B6788114Da68E73c418f9',
   };
 
-  const Utility = await ethers.getContractFactory('contracts/CollaUtility.sol:CollaUtility');
+  const Utility = await ethers.getContractFactory(
+    'contracts/CollaUtility.sol:CollaUtility'
+  );
   const pricePerMint = ethers.parseEther('0.001');
   const utility = await Utility.deploy(
     nftAddress,
@@ -68,8 +70,8 @@ async function main() {
     airnodeInitConfig.sponsor,
     airnodeInitConfig.sponsorWallet,
     airnodeInitConfig.endpointId,
-    airnodeInitConfig.requester
-  ])
+    airnodeInitConfig.requester,
+  ]);
 
   console.log('NFT Address: ', nftAddress);
   console.log('Patreon Address :', patreonAddress);

@@ -11,6 +11,8 @@ contract CollaNFT is ERC1155, AccessControl, ERC1155Supply {
 
     uint256 public currentTokenId = 0;
 
+    event Minted(address to, uint256 tokenId, bytes data);
+
     constructor() ERC1155("/metadata/") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
@@ -32,6 +34,7 @@ contract CollaNFT is ERC1155, AccessControl, ERC1155Supply {
         bytes memory data
     ) public onlyRole(MINTER_ROLE) {
         _mint(account, id, amount, data);
+        emit Minted(account, id, data);
     }
 
     function mintBatch(
