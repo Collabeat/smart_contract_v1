@@ -10,7 +10,7 @@ async function main() {
 
   await verify(nftAddress);
 
-  const protocolWallet = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+  const protocolWallet = process.env.PROTOCOL_WALLET;
   const protocolFeePercentage = ethers.parseEther('0.05');
   const nftRoyaltyPercentage = ethers.parseEther('0.025');
   const dividendPercentage = ethers.parseEther('0.025');
