@@ -24,13 +24,13 @@ module.exports = {
       ],
       gas: 5000000,
     },
-    // mumbai: {
-    //   chainId: 80001,
-    //   url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_MUMBAI}`,
-    //   accounts: [process.env.PRIVATE_KEY],
-    //   gas: 5000000,
-    //   // gasPrice: 50000000000
-    // },
+    mumbai: {
+      chainId: 80001,
+      url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_MUMBAI}`,
+      accounts: [process.env.PRIVATE_KEY],
+      gas: 5000000,
+      // gasPrice: 50000000000
+    },
   },
   etherscan: {
     apiKey: {
